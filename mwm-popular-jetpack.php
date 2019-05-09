@@ -43,6 +43,7 @@ function mwm_popular_jetpack_func( $atts = [], $content = null, $tag = '' ) {
 		'cache' => 86400,
   		'ssl' => 0,
 		'exclude' => '',
+		'api_limit' => 30,
   ), $atts, $tag );
 	
 	$output = '';
@@ -62,7 +63,9 @@ function mwm_popular_jetpack_func( $atts = [], $content = null, $tag = '' ) {
 		//$cache_age_in_seconds = 10;   // 10 seconds
 		$force_ssl_links = 0;
 		$excluded_posts = array();
+		$api_limit = 30; // How many results to return from Jetpack. Needs to be small number so results can be fetched quickly.
 		
+	
 		// These arrays specify the user input we allow for these attributes.
 		$allowed_timespans = array('all', 'year', 'month', 'week', 'day');
 		
@@ -84,6 +87,14 @@ function mwm_popular_jetpack_func( $atts = [], $content = null, $tag = '' ) {
 		}
 		if ($a['ssl'] == 1) {
 			$force_ssl_links = 1;
+		}
+		if ( is_numeric($a['api_limit']) ) {
+			$api_limit = $a['api_limit'];
+		}
+		
+		// Make sure enough posts are pulled from the API to fill all the list positions
+		if ($api_limit <= $list_limit) {
+			$api_limit = $list_limit * 2;
 		}
 			
 		// Start naming transient
@@ -136,7 +147,7 @@ function mwm_popular_jetpack_func( $atts = [], $content = null, $tag = '' ) {
 			
 			$blog_id = Jetpack_Options::get_option( 'id' );
 			
-			$csv_url = sprintf('https://stats.wordpress.com/csv.php?api_key=%s&blog_id=%s&table=postviews&days=%s&limit=-1&format=json&summarize', $api_key, $blog_id, $days);
+			$csv_url = sprintf('https://stats.wordpress.com/csv.php?api_key=%s&blog_id=%s&table=postviews&days=%s&limit=%s&format=json&summarize', $api_key, $blog_id, $days, $api_limit);
 			
 			$response = wp_remote_get( $csv_url );
 			$data = json_decode( wp_remote_retrieve_body( $response ) );
@@ -145,6 +156,7 @@ function mwm_popular_jetpack_func( $atts = [], $content = null, $tag = '' ) {
 			$count = 0;
 						
 			if ($popular) {
+				//$output .= '<!-- CSV URL: ' . $csv_url . ' -->';
 				$output .= '<ul class="most-popular-jetpack">';
 				foreach ($popular as $key => $object) {
 					
